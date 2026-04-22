@@ -16,6 +16,23 @@ func init() {
 	gwtCmd.AddCommand(gwtListCmd)
 	gwtCmd.AddCommand(gwtCreateCmd)
 	gwtCmd.AddCommand(gwtDeleteCmd)
+	// short aliases at root level
+	rootCmd.AddCommand(&cobra.Command{
+		Use:   "gwtl",
+		Short: "List worktrees (→ gwt list)",
+		RunE:  runGwtList,
+	})
+	rootCmd.AddCommand(&cobra.Command{
+		Use:   "gwtc <name>",
+		Short: "Create a worktree (→ gwt create)",
+		Args:  cobra.ExactArgs(1),
+		RunE:  runGwtCreate,
+	})
+	rootCmd.AddCommand(&cobra.Command{
+		Use:   "gwtd",
+		Short: "Delete current worktree (→ gwt delete)",
+		RunE:  runGwtDelete,
+	})
 }
 
 var gwtCmd = &cobra.Command{
@@ -68,7 +85,7 @@ func worktreesDir(mainRoot string) string {
 }
 
 func readLine(prompt string) (string, error) {
-	fmt.Print(prompt)
+	fmt.Fprint(os.Stderr, prompt)
 	r := bufio.NewReader(os.Stdin)
 	line, err := r.ReadString('\n')
 	return strings.TrimSpace(line), err
@@ -116,8 +133,7 @@ func runGwtCreate(_ *cobra.Command, args []string) error {
 	path := filepath.Join(dir, name)
 	branch := name
 
-	cmd := exec.Command("git", "worktree", "add", path, "-b", branch)
-	if out, err := cmd.CombinedOutput(); err != nil {
+	if out, err := exec.Command("git", "worktree", "add", path, "-b", branch).CombinedOutput(); err != nil {
 		return fmt.Errorf("%s", strings.TrimSpace(string(out)))
 	}
 	fmt.Printf("created: %s  (branch: %s)\n", path, branch)
@@ -138,18 +154,15 @@ func runGwtDelete(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("you are in the main worktree — cd into a branch worktree first")
 	}
 
-	// Current branch name
 	branchOut, err := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD").Output()
 	if err != nil {
 		return fmt.Errorf("could not determine current branch")
 	}
 	branch := strings.TrimSpace(string(branchOut))
 
-	// Check for uncommitted changes
 	statusOut, _ := exec.Command("git", "status", "--porcelain").Output()
 	hasUncommitted := strings.TrimSpace(string(statusOut)) != ""
 
-	// Check for unpushed commits (ignore error — no upstream is fine)
 	unpushedOut, _ := exec.Command("git", "log", "@{u}..", "--oneline").Output()
 	hasUnpushed := strings.TrimSpace(string(unpushedOut)) != ""
 
@@ -162,16 +175,16 @@ func runGwtDelete(_ *cobra.Command, _ []string) error {
 		if hasUnpushed {
 			fmt.Fprintf(os.Stderr, "  - unpushed commits\n")
 		}
-		input, _ := readLine(fmt.Sprintf("Re-enter branch name to confirm deletion: "))
+		input, _ := readLine("Re-enter branch name to confirm deletion: ")
 		if input != branch {
-			fmt.Println("Aborted: branch name did not match.")
+			fmt.Fprintln(os.Stderr, "Aborted: branch name did not match.")
 			return nil
 		}
 		force = true
 	} else {
 		input, _ := readLine(fmt.Sprintf("Delete worktree '%s'? [y/N] ", branch))
 		if strings.ToLower(input) != "y" {
-			fmt.Println("Aborted.")
+			fmt.Fprintln(os.Stderr, "Aborted.")
 			return nil
 		}
 	}
@@ -186,3 +199,4 @@ func runGwtDelete(_ *cobra.Command, _ []string) error {
 	fmt.Printf("deleted: %s\n", cwd)
 	return nil
 }
+
