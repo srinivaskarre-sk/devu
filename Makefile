@@ -1,14 +1,15 @@
-BINARY     := devu
 INSTALL_DIR := $(HOME)/.local/bin
 
 .PHONY: build install clean
 
 build:
-	go build -o $(BINARY) .
+	go build -o devu .
+	go build -o gwt ./gwt
 
 install: build
-	cp $(BINARY) $(INSTALL_DIR)/$(BINARY)
-	@echo "installed: $(INSTALL_DIR)/$(BINARY)"
+	cp devu $(INSTALL_DIR)/devu
+	cp gwt  $(INSTALL_DIR)/gwt
+	@echo "installed: $(INSTALL_DIR)/devu  $(INSTALL_DIR)/gwt"
 
 clean:
-	rm -f $(BINARY)
+	rm -f devu gwt
