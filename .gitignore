@@ -1,3 +1,4 @@
-devu
-gwt
+bin/devu
+bin/gwt
+gwt/gwt
 gwt/.env
